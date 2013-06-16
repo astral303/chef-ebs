@@ -63,12 +63,8 @@ node[:ebs][:raids].each do |raid_device, options|
 
   ruby_block "Create or resume RAID array #{raid_device}" do
     block do
-      if BlockDevice.existing_raid_at?(raid_device)
-        if BlockDevice.assembled_raid_at?(raid_device)
-          Chef::Log.info "Skipping RAID array at #{raid_device} - already assembled and probably mounted at #{options[:mount_point]}"
-        else
-          BlockDevice.assemble_raid(raid_device, options)
-        end
+      if BlockDevice.assembled_raid_at?(raid_device)
+        Chef::Log.info "Skipping RAID array at #{raid_device} - already assembled and probably mounted at #{options[:mount_point]}"
       else
         BlockDevice.create_raid(raid_device, node[:ebs][:mdadm_chunk_size], options)
       end

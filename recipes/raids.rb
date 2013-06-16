@@ -101,35 +101,34 @@ node[:ebs][:raids].each do |raid_device, options|
     end
   end
 
-  mount options[:mount_point] do
-    action :enable
-    fstype options[:fstype]
-    device devicetomount
-    options "noatime"
-  end
+  case node[:platform]
+  when 'redhat','centos','fedora','amazon'
+    execute "echo 'DEVICE /dev/hd*[0-9] /dev/sd*[0-9]' > /etc/mdadm.conf"
+    execute "mdadm --detail --scan >> /etc/mdadm.conf"
+  when 'debian','ubuntu'
+    execute "/usr/share/mdadm/mkconf force-generate /etc/mdadm/mdadm.conf"
 
-  execute "/usr/share/mdadm/mkconf force-generate /etc/mdadm/mdadm.conf"
-
-  initrd = "/boot/initrd.img-#{node['kernel']['release']}"
-  if File.exists?(initrd)
-    initmd5 = Digest::MD5.hexdigest(IO.read(initrd))
-    geninitrd = initmd5 != node['ebs']['initrd_md5']
-    Chef::Log.debug("oldinitrd md5: #{initmd5}")
-  else
-    geninitrd = true
-  end
-
-  execute "update-initramfs -u" do
-    action :run
-    only_if { geninitrd }
-  end
-
-  ruby_block "calculate new md5" do
-    block do
-      node.set['ebs']['initrd_md5'] = Digest::MD5.hexdigest(IO.read(initrd)) if geninitrd
-      Chef::Log.debug("after initrd md5: #{node['ebs']['initrd_md5']}")
+    initrd = "/boot/initrd.img-#{node['kernel']['release']}"
+    if File.exists?(initrd)
+      initmd5 = Digest::MD5.hexdigest(IO.read(initrd))
+      geninitrd = initmd5 != node['ebs']['initrd_md5']
+      Chef::Log.debug("oldinitrd md5: #{initmd5}")
+    else
+      geninitrd = true
     end
-    action :create
+
+    execute "update-initramfs -u" do
+      action :run
+      only_if { geninitrd }
+    end
+
+    ruby_block "calculate new md5" do
+      block do
+        node.set['ebs']['initrd_md5'] = Digest::MD5.hexdigest(IO.read(initrd)) if geninitrd
+        Chef::Log.debug("after initrd md5: #{node['ebs']['initrd_md5']}")
+      end
+      action :create
+    end
   end
 
   template "/etc/rc.local" do

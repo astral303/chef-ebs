@@ -10,5 +10,5 @@ recipe "ebs::volumes", "Mounts attached EBS volumes"
 recipe "ebs::raids", "Mounts attached EBS RAIDs"
 recipe "ebs::persistent", "Mounts volumes defined in attributes"
 
-depends 'aws', '>= 0.101.0'
+depends 'aws', '>= 2.2.2'
 depends 'delayed_evaluator'
